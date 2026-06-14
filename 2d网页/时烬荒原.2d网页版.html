@@ -4455,9 +4455,11 @@
             const bmpPanel = document.getElementById('battle-map-panel');
             if (bmpPanel) bmpPanel.classList.remove('active');
             
-            // 仅在真正的移动端触屏设备（或使用 ?mobile 调试参数时）在战斗开始时显示虚拟按键，避免 PC 端显示
-            const isMobile = (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && 
-                              (('ontouchstart' in window) || navigator.maxTouchPoints > 0)) ||
+            // 仅在移动端、触屏设备、窄屏设备（或使用 ?mobile 调试参数）在战斗开始时显示虚拟按键，避免 PC 端显示
+            const isMobile = ('ontouchstart' in window) || 
+                             (navigator.maxTouchPoints > 0) || 
+                             /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                             (window.innerWidth <= 1024 || window.innerHeight <= 1024) ||
                              window.location.search.includes('mobile');
             if (isMobile) {
                 const mobileContainer = document.querySelector('.mobile-controls-container');
