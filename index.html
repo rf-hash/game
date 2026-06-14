@@ -3576,6 +3576,100 @@
             logMsg(`[系统] 切换到了 ${modeTexts[currentModeIndex].substring(3)}。`, 'info');
         };
 
+ const showCenterNotice = (text, targetCard = null) => {
+            const existing = document.querySelectorAll('.center-notice-overlay');
+            existing.forEach(el => el.remove());
+
+            const notice = document.createElement('div');
+            notice.className = 'center-notice-overlay';
+            notice.textContent = text;
+
+            let positionStyle = {};
+            let isRelative = false;
+
+            if (targetCard && targetCard.parentElement) {
+                const parent = targetCard.parentElement;
+                const children = Array.from(parent.children);
+                const index = children.indexOf(targetCard);
+                let neighborCard = null;
+
+                if (index !== -1) {
+                    if (index % 2 === 0) {
+                        if (index + 1 < children.length) {
+                            neighborCard = children[index + 1];
+                        }
+                    } else {
+                        if (index - 1 >= 0) {
+                            neighborCard = children[index - 1];
+                        }
+                    }
+                }
+
+                const rect1 = targetCard.getBoundingClientRect();
+                const rect2 = neighborCard ? neighborCard.getBoundingClientRect() : rect1;
+
+                const midX = (rect1.left + rect1.right + rect2.left + rect2.right) / 4;
+                const topY = Math.min(rect1.top, rect2.top);
+
+                positionStyle = {
+                    position: 'fixed',
+                    left: `${midX}px`,
+                    top: `${topY}px`
+                };
+                isRelative = true;
+            } else {
+                positionStyle = {
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%'
+                };
+            }
+            
+            Object.assign(notice.style, {
+                transform: 'translate(-50%, -50%) scale(0.8)',
+                zIndex: '99999',
+                padding: '16px 36px',
+                background: 'rgba(26, 26, 28, 0.9)',
+                backdropFilter: 'blur(12px)',
+                webkitBackdropFilter: 'blur(12px)',
+                border: '2px solid #ff4d4d',
+                borderRadius: '12px',
+                color: '#ff4d4d',
+                fontSize: '24px',
+                fontWeight: '900',
+                letterSpacing: '2px',
+                textAlign: 'center',
+                boxShadow: '0 10px 45px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(255, 77, 77, 0.3)',
+                textShadow: '0 0 12px rgba(255, 77, 77, 0.6)',
+                pointerEvents: 'none',
+                opacity: '0',
+                transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+            }, positionStyle);
+
+            if (isRelative) {
+                document.body.appendChild(notice);
+            } else {
+                const wrapper = document.querySelector('.canvas-wrapper');
+                if (wrapper) wrapper.appendChild(notice);
+            }
+
+            notice.offsetHeight; // force reflow
+            notice.style.opacity = '1';
+            notice.style.transform = 'translate(-50%, -50%) scale(1.05)';
+            
+            setTimeout(() => {
+                notice.style.transform = 'translate(-50%, -50%) scale(1)';
+            }, 150);
+
+            setTimeout(() => {
+                notice.style.opacity = '0';
+                notice.style.transform = 'translate(-50%, -50%) scale(0.95)';
+                setTimeout(() => {
+                    notice.remove();
+                }, 300);
+            }, 1500);
+        };
+
         const updateProfileUI = () => {
             const state = pm.getPlayerState();
             hudGold.textContent = state.gold.toString();
@@ -3840,7 +3934,18 @@
                                     logMsg(`[商店] 成功购买了 [${item.name}]！`, 'reward');
                                     updateProfileUI();
                                 } else {
-                                    logMsg(`[商店] 购买失败！请检查您的代币余额是否充足，或背包已满。`, 'system');
+                                    const state = pm.getPlayerState();
+                                    const currency = item.priceType === 'diamonds' ? 'diamonds' : 'gold';
+                                    if (state[currency] < item.price) {
+                                        if (item.type === 'weapon') {
+                                            showCenterNotice('余额不足', card);
+                                        }
+                                        logMsg(`[商店] 购买失败！代币余额不足。`, 'system');
+                                    } else if (state.inventory.length >= 40) {
+                                        logMsg(`[商店] 购买失败！背包已满。`, 'system');
+                                    } else {
+                                        logMsg(`[商店] 购买失败！请检查您的代币余额是否充足，或背包已满。`, 'system');
+                                    }
                                 }
                             };
                         }
@@ -3857,7 +3962,18 @@
                             logMsg(`[商店] 成功购买了 [${item.name}]！`, 'reward');
                             updateProfileUI();
                         } else {
-                            logMsg(`[商店] 购买失败！请检查您的代币余额是否充足，或背包已满。`, 'system');
+                            const state = pm.getPlayerState();
+                            const currency = item.priceType === 'diamonds' ? 'diamonds' : 'gold';
+                            if (state[currency] < item.price) {
+                                if (item.type === 'weapon') {
+                                    showCenterNotice('余额不足', card);
+                                }
+                                logMsg(`[商店] 购买失败！代币余额不足。`, 'system');
+                            } else if (state.inventory.length >= 40) {
+                                logMsg(`[商店] 购买失败！背包已满。`, 'system');
+                            } else {
+                                logMsg(`[商店] 购买失败！请检查您的代币余额是否充足，或背包已满。`, 'system');
+                            }
                         }
                     };
                 }
