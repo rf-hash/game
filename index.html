@@ -79,11 +79,14 @@
       inset: 0;
       z-index: 500000;
       background: radial-gradient(ellipse at center, #1a0e00 0%, #000000 100%);
-      display: flex;
+      display: none;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 32px;
+      justify-content: flex-start;
+      gap: clamp(12px, 3.5vh, 32px);
+      padding: clamp(15px, 5vh, 40px) 15px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       opacity: 0;
       transition: opacity 0.8s ease;
     }
@@ -180,12 +183,13 @@
       flex-direction: column;
       align-items: center;
       gap: 16px;
-      padding: 28px 36px;
+      padding: clamp(16px, 3.5vh, 28px) 36px;
       background: linear-gradient(145deg, rgba(26,14,0,0.96) 0%, rgba(30,18,4,0.96) 100%);
       border: 1.5px solid var(--accent-gold);
       border-radius: 12px;
       box-shadow: 0 0 60px rgba(201,160,84,0.2), 0 8px 32px rgba(0,0,0,0.8);
       width: min(90vw, 480px);
+      margin-bottom: 40px;
     }
     #faction-name-dialog h3 {
       font-family: "STKaiti", "KaiTi", serif;
@@ -1649,7 +1653,7 @@
   <!-- =============================================
        首次进入阵营分配全屏遮罩
        ============================================= -->
-  <div id="faction-setup-overlay">
+  <div id="faction-setup-overlay" style="display: none;">
     <div class="faction-setup-title">⚔ 乱世将至，天命降临 ⚔</div>
     <p class="faction-setup-subtitle">命运之轮转动，你的领地已被选定</p>
 
@@ -3483,6 +3487,20 @@
         const splashFlash = document.getElementById('splash-flash');
 
         if (splashScreen && splashLogo) {
+            let animationFinished = false;
+            let flashTimeout, fadeOutTimeout, removeTimeout;
+
+            const skipSplash = () => {
+                if (animationFinished) return;
+                animationFinished = true;
+                clearTimeout(flashTimeout);
+                clearTimeout(fadeOutTimeout);
+                clearTimeout(removeTimeout);
+                splashScreen.remove();
+                if (splashFlash) splashFlash.remove();
+                checkAndShowFactionSetup();
+            };
+
             // 延迟一帧触发动画
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
@@ -3492,8 +3510,12 @@
                 });
             });
 
+            // 允许点击/触摸闪屏任意区域直接跳过动画
+            splashScreen.addEventListener('click', skipSplash);
+            splashScreen.addEventListener('touchstart', skipSplash, { passive: true });
+
             // 6.0秒后（当最清晰、最大、在正中间时），触发白光闪烁
-            setTimeout(() => {
+            flashTimeout = setTimeout(() => {
                 if (splashFlash) {
                     splashFlash.style.opacity = '1';
                     
@@ -3501,17 +3523,20 @@
                     splashLogo.style.filter = 'drop-shadow(0 0 30px rgba(255, 255, 255, 1))';
                     
                     // 50毫秒后开始淡出白光和整个背景
-                    setTimeout(() => {
+                    fadeOutTimeout = setTimeout(() => {
                         splashFlash.style.transition = 'opacity 0.6s ease-out';
                         splashFlash.style.opacity = '0';
                         
                         splashScreen.style.opacity = '0';
                         // 动画结束后完全移除DOM元素
-                        setTimeout(() => {
-                            splashScreen.remove();
-                            splashFlash.remove();
-                            // 闪屏结束后检查是否需要阵营分配
-                            checkAndShowFactionSetup();
+                        removeTimeout = setTimeout(() => {
+                            if (!animationFinished) {
+                                animationFinished = true;
+                                splashScreen.remove();
+                                splashFlash.remove();
+                                // 闪屏结束后检查是否需要阵营分配
+                                checkAndShowFactionSetup();
+                            }
                         }, 800);
                     }, 50);
                 }
